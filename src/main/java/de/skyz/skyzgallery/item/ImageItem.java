@@ -24,7 +24,7 @@ public final class ImageItem extends Item {
 
     private ImageItem() {
         setRegistryName(SkyZGallery.MODID, "image");
-        setUnlocalizedName(SkyZGallery.MODID + ".image");
+        setTranslationKey(SkyZGallery.MODID + ".image");
         setMaxStackSize(1);
     }
 

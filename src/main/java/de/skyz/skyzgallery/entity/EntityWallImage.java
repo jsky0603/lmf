@@ -91,7 +91,7 @@ public final class EntityWallImage extends EntityHanging implements IEntityAddit
     @Override
     public void readSpawnData(ByteBuf buffer) {
         hangingPosition = new BlockPos(buffer.readInt(), buffer.readInt(), buffer.readInt());
-        EnumFacing direction = EnumFacing.getFront(buffer.readUnsignedByte());
+        EnumFacing direction = EnumFacing.byIndex(buffer.readUnsignedByte());
         reference = ImageReference.read(ByteBufUtils.readTag(buffer));
         updateFacingWithBoundingBox(direction.getAxis().isHorizontal() ? direction : EnumFacing.NORTH);
     }

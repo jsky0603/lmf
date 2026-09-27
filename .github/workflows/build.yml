@@ -1,0 +1,70 @@
+name: SkyZGallery bauen
+
+on:
+  push:
+    branches: [main, skyzgallery-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skyzgallery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Quellcode laden
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Java 8 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Gradle einrichten
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4.4.2
+        with:
+          gradle-version: '5.6.4'
+          cache-disabled: true
+
+      - name: Mod bauen und Bildtests ausführen
+        run: gradle --no-daemon --stacktrace build
+
+      - name: JAR prüfen
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import struct
+          import zipfile
+          from pathlib import Path
+
+          artifact = Path('build/libs/SkyZGallery-1.0.0.jar')
+          with zipfile.ZipFile(artifact) as jar:
+              metadata = json.loads(jar.read('mcmod.info'))[0]
+              assert metadata['modid'] == 'skyzgallery'
+              assert metadata['version'] == '1.0.0'
+              assert metadata['mcversion'] == '1.12.2'
+              classes = [name for name in jar.namelist() if name.endswith('.class')]
+              assert 'de/skyz/skyzgallery/SkyZGallery.class' in classes
+              assert not any(name.endswith('ImageSafetyTest.class') for name in classes)
+              for name in classes:
+                  magic, minor, major = struct.unpack('>IHH', jar.read(name)[:8])
+                  assert magic == 0xCAFEBABE and major == 52, name
+          print('SkyZGallery: Mod-Metadaten und Java-8-Klassen geprüft.')
+          PY
+
+      - name: Fertige Mod bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkyZGallery-1.0.0
+          path: build/libs/SkyZGallery-1.0.0.jar
+          if-no-files-found: error
+          retention-days: 14

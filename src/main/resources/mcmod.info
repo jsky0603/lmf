@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "skyzgallery",
+    "name": "SkyZGallery",
+    "description": "Serverbilder als Wandbilder und unsichtbar dargestellte Spielerrüstung.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["SkyZ"],
+    "credits": "",
+    "url": ""
+  }
+]

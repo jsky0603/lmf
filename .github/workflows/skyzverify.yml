@@ -1,0 +1,81 @@
+name: SkyZVerify bauen
+
+on:
+  push:
+    paths:
+      - 'SkyZVerify/**'
+      - '.github/workflows/skyzverify.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4.4.2
+        with:
+          gradle-version: '5.6.4'
+          cache-disabled: true
+
+      - name: Forge-Mod bauen und Speicher-Test
+        working-directory: SkyZVerify/mod
+        run: gradle --no-daemon --stacktrace build
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Bot-Abhängigkeiten und Tests
+        working-directory: SkyZVerify/bot
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm ci --ignore-scripts
+          npm test
+
+      - name: Mod und Bot-Paket prüfen
+        run: |
+          python3 - <<'PY'
+          import json, struct, zipfile
+          from pathlib import Path
+
+          jar = Path('SkyZVerify/mod/build/libs/SkyZVerify-1.0.0.jar')
+          with zipfile.ZipFile(jar) as z:
+              info = json.loads(z.read('mcmod.info'))[0]
+              assert info['modid'] == 'skyzverify' and info['version'] == '1.0.0'
+              assert info['mcversion'] == '1.12.2'
+              classes = [n for n in z.namelist() if n.endswith('.class')]
+              assert 'de/skyz/skyzverify/SkyZVerify.class' in classes
+              assert not any(n.endswith('LinkStoreTest.class') for n in classes)
+              for name in classes:
+                  magic, minor, major = struct.unpack('>IHH', z.read(name)[:8])
+                  assert magic == 0xCAFEBABE and major == 52, name
+
+          bot = Path('SkyZVerify/bot')
+          archive = bot / 'SkyZVerify-bot-1.0.0.zip'
+          with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
+              for name in ('index.js', 'core.js', 'package.json', 'package-lock.json', 'config.example.json'):
+                  z.write(bot / name, 'SkyZVerify-bot/' + name)
+              z.write('SkyZVerify/README.md', 'SkyZVerify-bot/README.md')
+          print('JAR: Forge-Metadaten und Java 8 geprüft; Bot-Paket erstellt.')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SkyZVerify-1.0.0
+          path: |
+            SkyZVerify/mod/build/libs/SkyZVerify-1.0.0.jar
+            SkyZVerify/bot/SkyZVerify-bot-1.0.0.zip
+          if-no-files-found: error
+          retention-days: 14

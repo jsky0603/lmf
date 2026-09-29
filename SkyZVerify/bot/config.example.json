@@ -1,0 +1,8 @@
+{
+  "token": "DISCORD_BOT_TOKEN_HIER",
+  "guildId": "123456789012345678",
+  "categoryId": "",
+  "bridgeSecret": "64_HEX_ZEICHEN_AUS_config/skyzverify.properties",
+  "listenHost": "127.0.0.1",
+  "listenPort": 8787
+}

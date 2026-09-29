@@ -1,0 +1,11 @@
+[
+  {
+    "modid": "skyzverify",
+    "name": "SkyZVerify",
+    "description": "Serverseitige Discord-Verifizierung für neue Spieler.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["SkyZ"],
+    "url": ""
+  }
+]

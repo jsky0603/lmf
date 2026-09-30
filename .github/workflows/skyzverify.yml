@@ -40,7 +40,6 @@ jobs:
       - name: Bot-Abhängigkeiten, Sicherheit und Tests
         working-directory: SkyZVerify/bot
         run: |
-          npm install --package-lock-only --ignore-scripts
           npm ci --ignore-scripts
           npm audit --omit=dev
           npm test

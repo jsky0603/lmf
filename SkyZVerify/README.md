@@ -28,8 +28,8 @@ nicht in der Mod-JAR.
    Discord-Server-ID (`guildId`) und **denselben** 64-stelligen
    `bridge.secret`-Wert als `bridgeSecret` ein. `categoryId` ist optional.
    Token und Secret niemals in GitHub, Screenshots oder Logs posten.
-3. Benutze Node.js 24.17 oder neuer. Im Bot-Ordner `npm ci` (mit `package-lock.json`) beziehungsweise `npm install`
-   (beim Quellpaket ohne Lockdatei) und danach `npm start` ausführen. Der Bot muss
+3. Benutze Node.js 24.17 oder neuer. Im Bot-Ordner `npm ci` und danach
+   `npm start` ausführen. Der Bot muss
    dauerhaft laufen. Neue Spieler bleiben gesperrt, solange er nicht erreichbar ist.
 
 Wenn Bot und Minecraft in **derselben Netzwerkumgebung** laufen, kann

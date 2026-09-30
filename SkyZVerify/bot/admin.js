@@ -123,7 +123,9 @@ class AdminPanel {
   }
 
   pending() {
-    return { actions: this.state.actions.slice(0, 10) };
+    // Acknowledge one operation before dispatching the next. A retried unlink
+    // must never run after a newly queued link for the same Minecraft account.
+    return { actions: this.state.actions.slice(0, 1) };
   }
 
   async finish(body) {

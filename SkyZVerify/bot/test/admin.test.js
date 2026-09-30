@@ -31,11 +31,12 @@ test('Admin-Auftrag wird dauerhaft gespeichert und nach Ergebnis entfernt', asyn
   const action = { id: '33333333-3333-4333-8333-333333333333', actorId: '678901234567890123',
     type: 'unlink', mc: first.uuid, discordId: first.discordId };
   panel.state.actions.push(action);
+  panel.state.actions.push({ ...action, id: '44444444-4444-4444-8444-444444444444', type: 'link' });
   panel.save();
   const restored = new AdminPanel(root, guild, { user: { id: '456789012345678901' } }, {});
   assert.deepEqual(restored.pending().actions, [action]);
   await panel.finish({ id: action.id, ok: true, message: 'Getrennt.' });
-  assert.deepEqual(new AdminPanel(root, guild, {}, {}).pending().actions, []);
+  assert.equal(new AdminPanel(root, guild, {}, {}).pending().actions[0].type, 'link');
   fs.rmSync(root, { recursive: true, force: true });
 });
 

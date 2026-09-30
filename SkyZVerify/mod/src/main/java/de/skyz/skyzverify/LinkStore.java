@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -149,6 +150,15 @@ public final class LinkStore {
                 out.add(new Result(player.getKey(), player.getValue(), link));
             }
         }
+        return Collections.unmodifiableList(out);
+    }
+
+    public synchronized List<Result> allLinks() {
+        List<Result> out = new ArrayList<Result>();
+        for (Map.Entry<UUID, Link> entry : links.entrySet()) {
+            out.add(new Result(entry.getKey(), known.get(entry.getKey()), entry.getValue()));
+        }
+        Collections.sort(out, Comparator.comparing(result -> result.playerName.toLowerCase(Locale.ROOT)));
         return Collections.unmodifiableList(out);
     }
 

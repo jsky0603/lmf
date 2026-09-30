@@ -1,5 +1,6 @@
 package de.skyz.skyzverify;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.ByteArrayOutputStream;
@@ -9,6 +10,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /** Blocking HTTP client; always call on the background executor. */
 public final class BridgeClient {
@@ -33,6 +35,33 @@ public final class BridgeClient {
 
     public void dismiss(String requestId) throws IOException {
         send("DELETE", "/requests/" + requestId, null);
+    }
+
+    public JsonObject adminActions() throws IOException {
+        return send("GET", "/admin/actions", null);
+    }
+
+    public void adminSnapshot(List<LinkStore.Result> links) throws IOException {
+        JsonObject body = new JsonObject();
+        JsonArray entries = new JsonArray();
+        for (LinkStore.Result result : links) {
+            JsonObject entry = new JsonObject();
+            entry.addProperty("uuid", result.uuid.toString());
+            entry.addProperty("mcName", result.playerName);
+            entry.addProperty("discordId", result.link.discordId);
+            entry.addProperty("discordUsername", result.link.discordUsername);
+            entries.add(entry);
+        }
+        body.add("links", entries);
+        send("POST", "/admin/snapshot", body);
+    }
+
+    public void adminResult(String id, boolean ok, String message) throws IOException {
+        JsonObject body = new JsonObject();
+        body.addProperty("id", id);
+        body.addProperty("ok", ok);
+        body.addProperty("message", message);
+        send("POST", "/admin/result", body);
     }
 
     public static String field(JsonObject object, String key) throws IOException {

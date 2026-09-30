@@ -82,7 +82,7 @@ public final class VerifyCommands {
             LinkStore.Result found;
             try { found = service.store().unlink(args[0]); }
             catch (IOException | IllegalArgumentException exception) { throw new CommandException(exception.getMessage()); }
-            service.onAdminChanged(found.uuid);
+            service.onAdminUnlinked(found.uuid);
             say(sender, "Verknüpfung von " + found.playerName + " entfernt.");
             System.out.println("[SkyZVerify] Admin " + sender.getName() + " loeschte Verknuepfung von " + found.uuid);
         }

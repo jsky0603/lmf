@@ -37,11 +37,12 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Bot-Abhängigkeiten und Tests
+      - name: Bot-Abhängigkeiten, Sicherheit und Tests
         working-directory: SkyZVerify/bot
         run: |
           npm install --package-lock-only --ignore-scripts
           npm ci --ignore-scripts
+          npm audit --omit=dev
           npm test
 
       - name: Mod und Bot-Paket prüfen
@@ -50,10 +51,10 @@ jobs:
           import json, struct, zipfile
           from pathlib import Path
 
-          jar = Path('SkyZVerify/mod/build/libs/SkyZVerify-1.0.0.jar')
+          jar = Path('SkyZVerify/mod/build/libs/SkyZVerify-1.1.0.jar')
           with zipfile.ZipFile(jar) as z:
               info = json.loads(z.read('mcmod.info'))[0]
-              assert info['modid'] == 'skyzverify' and info['version'] == '1.0.0'
+              assert info['modid'] == 'skyzverify' and info['version'] == '1.1.0'
               assert info['mcversion'] == '1.12.2'
               classes = [n for n in z.namelist() if n.endswith('.class')]
               assert 'de/skyz/skyzverify/SkyZVerify.class' in classes
@@ -63,9 +64,10 @@ jobs:
                   assert magic == 0xCAFEBABE and major == 52, name
 
           bot = Path('SkyZVerify/bot')
-          archive = bot / 'SkyZVerify-bot-1.0.0.zip'
+          archive = bot / 'SkyZVerify-bot-1.1.0.zip'
           with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
-              for name in ('index.js', 'core.js', 'package.json', 'package-lock.json', 'config.example.json'):
+              for name in ('index.js', 'core.js', 'admin.js', 'package.json',
+                           'package-lock.json', 'config.example.json'):
                   z.write(bot / name, 'SkyZVerify-bot/' + name)
               z.write('SkyZVerify/README.md', 'SkyZVerify-bot/README.md')
           print('JAR: Forge-Metadaten und Java 8 geprüft; Bot-Paket erstellt.')
@@ -73,9 +75,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SkyZVerify-1.0.0
+          name: SkyZVerify-1.1.0
           path: |
-            SkyZVerify/mod/build/libs/SkyZVerify-1.0.0.jar
-            SkyZVerify/bot/SkyZVerify-bot-1.0.0.zip
+            SkyZVerify/mod/build/libs/SkyZVerify-1.1.0.jar
+            SkyZVerify/bot/SkyZVerify-bot-1.1.0.zip
           if-no-files-found: error
           retention-days: 14

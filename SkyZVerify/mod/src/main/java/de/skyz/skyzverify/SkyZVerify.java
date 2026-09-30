@@ -7,7 +7,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 
-@Mod(modid = SkyZVerify.MODID, name = "SkyZVerify", version = "1.0.0",
+@Mod(modid = SkyZVerify.MODID, name = "SkyZVerify", version = "1.1.0",
         serverSideOnly = true, acceptableRemoteVersions = "*",
         acceptedMinecraftVersions = "[1.12.2]", dependencies = "required-after:forge@[14.23.5.2859,)")
 public final class SkyZVerify {

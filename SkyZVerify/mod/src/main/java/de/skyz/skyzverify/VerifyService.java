@@ -1,9 +1,12 @@
 package de.skyz.skyzverify;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +35,18 @@ public final class VerifyService {
     private final Map<UUID, Pending> pending = new HashMap<UUID, Pending>();
     private final Map<UUID, Long> lastAttempt = new HashMap<UUID, Long>();
     private long ticks;
+    private boolean adminSyncing;
+
+    private static final class AdminResult {
+        final String id;
+        final boolean ok;
+        final String message;
+        AdminResult(String id, boolean ok, String message) {
+            this.id = id;
+            this.ok = ok;
+            this.message = message;
+        }
+    }
 
     private static final class Pending {
         final UUID playerId;
@@ -156,6 +171,7 @@ public final class VerifyService {
 
     public void tick() {
         ticks++;
+        if (ticks % 40 == 0 && !adminSyncing) syncAdmin();
         if (ticks % 40 != 0) return;
         for (Pending request : new ArrayList<Pending>(pending.values())) {
             if (request.expires < System.currentTimeMillis()) {
@@ -177,6 +193,83 @@ public final class VerifyService {
                     }
                 });
             }
+        }
+    }
+
+    private void syncAdmin() {
+        adminSyncing = true;
+        final List<LinkStore.Result> snapshot = store.allLinks();
+        worker.execute(() -> {
+            try { bridge.adminSnapshot(snapshot); }
+            catch (IOException exception) { System.err.println("[SkyZVerify] Admin-Übersicht: " + exception.getMessage()); }
+            JsonObject actions = null;
+            try { actions = bridge.adminActions(); }
+            catch (IOException exception) { System.err.println("[SkyZVerify] Admin-Aktionen: " + exception.getMessage()); }
+            final JsonObject received = actions;
+            server.addScheduledTask(() -> {
+                List<AdminResult> results = new ArrayList<AdminResult>();
+                if (received != null) {
+                    try {
+                        JsonArray list = received.getAsJsonArray("actions");
+                        if (list == null || list.size() > 10) throw new IllegalArgumentException("Ungueltige Aktionen");
+                        for (JsonElement element : list) {
+                            if (element.isJsonObject()) results.add(applyAdminAction(element.getAsJsonObject()));
+                        }
+                    } catch (RuntimeException exception) {
+                        System.err.println("[SkyZVerify] Admin-Aktionen ungueltig: " + exception.getMessage());
+                    }
+                }
+                worker.execute(() -> {
+                    for (AdminResult result : results) {
+                        try { bridge.adminResult(result.id, result.ok, result.message); }
+                        catch (IOException exception) {
+                            System.err.println("[SkyZVerify] Admin-Antwort: " + exception.getMessage());
+                        }
+                    }
+                    server.addScheduledTask(() -> adminSyncing = false);
+                });
+            });
+        });
+    }
+
+    private AdminResult applyAdminAction(JsonObject action) {
+        String id = null;
+        try {
+            id = BridgeClient.field(action, "id");
+            UUID.fromString(id);
+            String type = BridgeClient.field(action, "type");
+            String target = BridgeClient.field(action, "mc");
+            String discordId = BridgeClient.field(action, "discordId");
+            String actor = BridgeClient.field(action, "actorId");
+            if (!LinkStore.validDiscordId(discordId) || !LinkStore.validDiscordId(actor)) {
+                throw new IllegalArgumentException("Ungueltige Discord-ID");
+            }
+            LinkStore.Result found = store.findOne(target);
+            if ("link".equals(type)) {
+                String username = BridgeClient.field(action, "discordUsername");
+                if (found == null) throw new IllegalArgumentException("Minecraft-Spieler muss einmal beigetreten sein");
+                if (found.link != null) {
+                    if (!found.link.discordId.equals(discordId)) throw new IllegalArgumentException("Spieler ist bereits verknuepft");
+                    return new AdminResult(id, true, found.playerName + " ist bereits verknuepft.");
+                }
+                store.link(found.uuid, discordId, username);
+                onAdminChanged(found.uuid);
+                System.out.println("[SkyZVerify] Discord-Admin " + actor + " verknuepfte " + found.uuid + " mit " + discordId);
+                return new AdminResult(id, true, found.playerName + " wurde verknuepft.");
+            }
+            if ("unlink".equals(type)) {
+                if (found == null || found.link == null) return new AdminResult(id, true, "Verknuepfung bereits entfernt.");
+                if (!found.link.discordId.equals(discordId)) {
+                    throw new IllegalArgumentException("Verknuepfung hat sich inzwischen geaendert");
+                }
+                store.unlink(found.uuid.toString());
+                onAdminUnlinked(found.uuid);
+                System.out.println("[SkyZVerify] Discord-Admin " + actor + " loeschte Verknuepfung " + found.uuid);
+                return new AdminResult(id, true, found.playerName + " wurde getrennt und im Spiel gesperrt.");
+            }
+            throw new IllegalArgumentException("Unbekannte Aktion");
+        } catch (IOException | IllegalArgumentException exception) {
+            return new AdminResult(id, false, exception.getMessage());
         }
     }
 
@@ -213,6 +306,15 @@ public final class VerifyService {
         if (player == null) return;
         if (locked(player)) prompt(player);
         else unlocked(player);
+    }
+
+    public void onAdminUnlinked(UUID uuid) {
+        cancel(uuid);
+        EntityPlayerMP player = server.getPlayerList().getPlayerByUUID(uuid);
+        if (player != null) {
+            player.connection.disconnect(new TextComponentString(
+                    "Deine Discord-Verknüpfung wurde entfernt. Verbinde dich erneut und nutze /verify."));
+        }
     }
 
     private void unlocked(EntityPlayerMP player) {

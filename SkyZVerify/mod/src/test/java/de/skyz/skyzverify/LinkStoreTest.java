@@ -20,6 +20,8 @@ public final class LinkStoreTest {
         store.remember(second, "Nou");
         store.link(first, "123456789012345678", "jsky");
         check(store.isLinked(first), "Link fehlt");
+        check(store.allLinks().size() == 1 && store.allLinks().get(0).uuid.equals(first),
+                "Admin-Snapshot ist unvollstaendig");
         check(store.search("123456789012345678").get(0).uuid.equals(first), "ID-Suche falsch");
         try {
             store.link(second, "123456789012345678", "jsky");
@@ -31,6 +33,7 @@ public final class LinkStoreTest {
         check(reloaded.search("NeuerName").get(0).uuid.equals(first), "Namensänderung nicht gespeichert");
         reloaded.unlink("123456789012345678");
         check(!new LinkStore(file).isLinked(first), "Löschen nicht gespeichert");
+        check(reloaded.allLinks().isEmpty(), "Geloeschte Verbindung erscheint noch im Admin-Snapshot");
         Files.write(file, ("player." + first + "=NeuerName\nlink." + first + "=ungueltig\n")
                 .getBytes(StandardCharsets.ISO_8859_1));
         try {

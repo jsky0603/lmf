@@ -8,6 +8,7 @@ const {
   ButtonBuilder, ButtonStyle, ActionRowBuilder,
 } = require('discord.js');
 const { validateRequest, authorised, canConfirm, SNOWFLAKE } = require('./core');
+const { AdminPanel } = require('./admin');
 
 const ROOT = __dirname;
 const DATA = path.join(ROOT, 'data');
@@ -46,6 +47,7 @@ class HttpError extends Error {
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 let guild;
+let admin;
 const attempts = new Map();
 let sequence = Promise.resolve();
 function serial(job) {
@@ -171,12 +173,12 @@ function reply(res, code, body) {
   res.end(json);
 }
 
-async function body(req) {
+async function body(req, limit = 4096) {
   let total = 0;
   const parts = [];
   for await (const part of req) {
     total += part.length;
-    if (total > 4096) throw new HttpError(413, 'TOO_LARGE');
+    if (total > limit) throw new HttpError(413, 'TOO_LARGE');
     parts.push(part);
   }
   try { return JSON.parse(Buffer.concat(parts).toString('utf8')); }
@@ -193,7 +195,17 @@ async function route(req, res) {
     return;
   }
   try {
-    if (req.method === 'POST' && req.url === '/requests') {
+    if (req.method === 'GET' && req.url === '/admin/actions') {
+      reply(res, 200, admin.pending());
+    } else if (req.method === 'POST' && req.url === '/admin/snapshot') {
+      try { await admin.receiveSnapshot(await body(req, 1024 * 1024)); }
+      catch (error) { throw new HttpError(400, 'BAD_SNAPSHOT'); }
+      reply(res, 200, { status: 'ok' });
+    } else if (req.method === 'POST' && req.url === '/admin/result') {
+      try { await admin.finish(await body(req)); }
+      catch (error) { throw new HttpError(400, 'BAD_RESULT'); }
+      reply(res, 200, { status: 'ok' });
+    } else if (req.method === 'POST' && req.url === '/requests') {
       const payload = await body(req);
       reply(res, 200, await serial(() => create(payload)));
     } else {
@@ -217,6 +229,17 @@ async function route(req, res) {
 }
 
 client.on(Events.InteractionCreate, async interaction => {
+  if (interaction.customId?.startsWith('svadmin:')) {
+    try { if (admin) await admin.interact(interaction); }
+    catch (error) {
+      console.error('[SkyZVerify] Admin-Interaktion:', error);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: 'Aktion fehlgeschlagen. Bitte erneut versuchen.',
+          ephemeral: true }).catch(() => {});
+      }
+    }
+    return;
+  }
   if (!interaction.isButton() || !interaction.customId.startsWith('skyverify:')) return;
   const entry = requests.get(interaction.customId.slice('skyverify:'.length));
   if (!canConfirm(entry, interaction.user.id, interaction.channelId, interaction.guildId)) {
@@ -240,6 +263,8 @@ client.once(Events.ClientReady, async ready => {
   try {
     guild = await ready.guilds.fetch(config.guildId);
     await cleanup(true);
+    admin = new AdminPanel(ROOT, guild, client, config);
+    await admin.start();
     setInterval(() => cleanup().catch(error => console.error('[SkyZVerify] Aufräumen:', error)), 30_000).unref();
     http.createServer((req, res) => route(req, res).catch(error => {
       console.error('[SkyZVerify] HTTP:', error);

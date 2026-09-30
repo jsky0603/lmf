@@ -171,7 +171,7 @@ public final class VerifyService {
 
     public void tick() {
         ticks++;
-        if (ticks % 40 == 0 && !adminSyncing) syncAdmin();
+        if (ticks % 20 == 0 && !adminSyncing) syncAdmin(ticks % 40 == 0);
         if (ticks % 40 != 0) return;
         for (Pending request : new ArrayList<Pending>(pending.values())) {
             if (request.expires < System.currentTimeMillis()) {
@@ -196,12 +196,14 @@ public final class VerifyService {
         }
     }
 
-    private void syncAdmin() {
+    private void syncAdmin(boolean includeSnapshot) {
         adminSyncing = true;
-        final List<LinkStore.Result> snapshot = store.allLinks();
+        final List<LinkStore.Result> snapshot = includeSnapshot ? store.allLinks() : null;
         worker.execute(() -> {
-            try { bridge.adminSnapshot(snapshot); }
-            catch (IOException exception) { System.err.println("[SkyZVerify] Admin-Übersicht: " + exception.getMessage()); }
+            if (snapshot != null) {
+                try { bridge.adminSnapshot(snapshot); }
+                catch (IOException exception) { System.err.println("[SkyZVerify] Admin-Übersicht: " + exception.getMessage()); }
+            }
             JsonObject actions = null;
             try { actions = bridge.adminActions(); }
             catch (IOException exception) { System.err.println("[SkyZVerify] Admin-Aktionen: " + exception.getMessage()); }

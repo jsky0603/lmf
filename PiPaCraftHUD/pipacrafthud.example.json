@@ -1,0 +1,70 @@
+{
+  "serverName": "PiPa Craft",
+  "timezone": "Europe/Berlin",
+  "updateTicks": 10,
+  "animationTicks": 10,
+  "scoreboardEnabled": true,
+  "tabEnabled": true,
+  "nameTagsEnabled": true,
+  "chatPrefixEnabled": true,
+  "liveAnnouncements": true,
+  "protectExistingSidebar": true,
+  "liveCommandCooldownSeconds": 5,
+  "livePrefix": "&d[LIVE] &r",
+  "tabPlayerFormat": "{live_prefix}&f{player}",
+  "liveOnLabel": "&dLIVE",
+  "liveOffLabel": "&7Offline",
+  "liveOnMessage": "&d{player} &fist jetzt live. Bitte respektiert, wenn jemand nicht im Stream vorkommen moechte.",
+  "liveOffMessage": "&d{player} &fist nicht mehr live.",
+  "livePersonalOn": "&dDein Live-Status ist jetzt aktiviert.",
+  "livePersonalOff": "&7Dein Live-Status ist jetzt deaktiviert.",
+  "liveStatusMessage": "&fDein Status: {live}",
+  "liveDisabledMessage": "&7/live ist in der Config deaktiviert.",
+  "liveEnabled": true,
+  "cooldownMessage": "&7Bitte warte {seconds} Sekunden.",
+  "hudOnMessage": "&dDein Scoreboard ist aktiviert.",
+  "hudOffMessage": "&7Dein Scoreboard ist deaktiviert.",
+  "reloadMessage": "&dPiPaCraft HUD: Config neu geladen.",
+  "titleFrames": [
+    "&d&lPiPa &5&lCraft",
+    "&5&lPiPa &d&lCraft",
+    "&d&lPiPa &f&lCraft",
+    "&f&lPiPa &d&lCraft"
+  ],
+  "headerFrames": [
+    "&5&m------------------------\n&d&lPiPa &5&lCraft\n&fGemeinsam spielen &d<3\n&7Online: &f{online}&7/&f{max_players}",
+    "&d&m------------------------\n&5&lPiPa &d&lCraft\n&fGemeinsam spielen &5<3\n&7Online: &f{online}&7/&f{max_players}"
+  ],
+  "footerFrames": [
+    "&7Live: &d{live_count} &8| &7Ping: &f{ping} ms\n&fMit &d/live &fmarkierst du deinen Stream.\n&5&m------------------------",
+    "&7Live: &d{live_count} &8| &7Ping: &f{ping} ms\n&fMit &5/live &fmarkierst du deinen Stream.\n&d&m------------------------"
+  ],
+  "scoreboardLines": [
+    "&5&m----------------",
+    "&7Spieler: &f{player}",
+    "&7Online: &d{online}&7/&f{max_players}",
+    "&7Stream: {live}",
+    "&r",
+    "&7Spielzeit: &f{playtime}",
+    "&7Tode: &f{deaths}",
+    "&7Ping: &f{ping} ms",
+    "&7TPS: &f{tps}",
+    "&r",
+    "&d/live &7zum Umschalten",
+    "&5&m----------------"
+  ],
+  "animations": {
+    "heart": [
+      "&d<3",
+      "&5<3",
+      "&f<3",
+      "&5<3"
+    ]
+  },
+  "dimensionNames": {
+    "0": "Oberwelt",
+    "-1": "Nether",
+    "1": "End",
+    "20": "Halloweenwelt"
+  }
+}

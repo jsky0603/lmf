@@ -9,6 +9,8 @@ import net.minecraft.scoreboard.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.stats.StatList;
 import net.minecraft.util.text.*;
+import net.minecraft.util.text.event.ClickEvent;
+import net.minecraft.util.text.event.HoverEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -23,7 +25,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-@Mod(modid = "pipacrafthud", name = "PiPaCraft HUD", version = "1.0.1",
+@Mod(modid = "pipacrafthud", name = "PiPaCraft HUD", version = "1.0.2",
         acceptedMinecraftVersions = "[1.12.2]", acceptableRemoteVersions = "*", serverSideOnly = true)
 public final class PiPaCraftHUD {
     private HudConfig config;
@@ -51,6 +53,7 @@ public final class PiPaCraftHUD {
         loadServerDeaths();
         event.registerServerCommand(new LiveCommand());
         event.registerServerCommand(new HudCommand());
+        event.registerServerCommand(new KillsCommand());
     }
     @Mod.EventHandler public void stopping(FMLServerStoppingEvent event) {
         for (EntityPlayerMP p : players()) {
@@ -146,6 +149,15 @@ public final class PiPaCraftHUD {
         serverDeaths.update(p.getUniqueID(), p.getStatFile().readStat(StatList.DEATHS));
     }
     private void refreshOnlineDeaths() { for (EntityPlayerMP p : players()) updateDeaths(p); }
+    private DeathLeaderboard deathLeaderboard() {
+        refreshOnlineDeaths();
+        return new DeathLeaderboard(serverDeaths.snapshot(), id -> {
+            EntityPlayerMP online = server.getPlayerList().getPlayerByUUID(id);
+            if (online != null) return online.getName();
+            com.mojang.authlib.GameProfile profile = server.getPlayerProfileCache().getProfileByUUID(id);
+            return profile == null ? null : profile.getName();
+        });
+    }
     private static void sendTabName(EntityPlayerMP viewer, UUID id, String text) {
         PacketBuffer buffer = new PacketBuffer(Unpooled.buffer());
         try {
@@ -300,6 +312,78 @@ public final class PiPaCraftHUD {
         }
         public List<String> getTabCompletions(MinecraftServer srv, ICommandSender sender, String[] args, net.minecraft.util.math.BlockPos pos) {
             return args.length == 1 ? getListOfStringsMatchingLastWord(args, "on", "off", "status") : Collections.emptyList();
+        }
+    }
+    private final class KillsCommand extends CommandBase {
+        public String getName() { return "kills"; }
+        public List<String> getAliases() { return Collections.singletonList("pipakills"); }
+        public String getUsage(ICommandSender sender) { return "/kills [Seite]"; }
+        public int getRequiredPermissionLevel() { return 0; }
+        public boolean checkPermission(MinecraftServer srv, ICommandSender sender) { return true; }
+        public void execute(MinecraftServer srv, ICommandSender sender, String[] args) {
+            KillsConfig layout = config.kills;
+            if (!layout.enabled) { send(sender, layout.disabled, Collections.emptyMap()); return; }
+            if (args.length > 1) { send(sender, layout.usage, Collections.emptyMap()); return; }
+            DeathLeaderboard ranking = deathLeaderboard();
+            int page = 1;
+            try { if (args.length == 1) page = Integer.parseInt(args[0]); }
+            catch (NumberFormatException ex) { page = 0; }
+            Map<String, String> vars = new LinkedHashMap<>();
+            vars.put("server", config.serverName);
+            vars.put("page", Integer.toString(page));
+            vars.put("pages", Integer.toString(ranking.pages()));
+            vars.put("players", Integer.toString(ranking.size()));
+            vars.put("total_deaths", Long.toString(ranking.total()));
+            if (page < 1 || page > ranking.pages()) {
+                send(sender, layout.invalidPage, vars); send(sender, layout.usage, vars); return;
+            }
+            send(sender, layout.separator, vars);
+            send(sender, layout.title, vars);
+            send(sender, layout.summary, vars);
+            send(sender, layout.separator, vars);
+            if (ranking.size() == 0) send(sender, layout.empty, vars);
+            for (DeathLeaderboard.Entry entry : ranking.page(page)) {
+                Map<String, String> row = new LinkedHashMap<>(vars);
+                row.put("rank", Integer.toString(entry.rank));
+                row.put("rank_color", layout.rankColors[Math.min(entry.rank, 4) - 1]);
+                row.put("player", entry.name); row.put("deaths", Long.toString(entry.deaths));
+                row.put("uuid", entry.id.toString());
+                TextComponentString text = new TextComponentString(HudText.render(layout.row, row));
+                text.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        new TextComponentString(HudText.render(layout.playerHover, row))));
+                sender.sendMessage(text);
+            }
+            send(sender, layout.separator, vars);
+            ITextComponent navigation = new TextComponentString("");
+            // Keep navigation working if another mod also uses the name /kills.
+            String command = "/pipakills";
+            if (page > 1) navigation.appendSibling(button(layout.previous, page - 1, command, vars))
+                    .appendSibling(new TextComponentString(HudText.render(layout.navigationSeparator, vars)));
+            navigation.appendSibling(new TextComponentString(HudText.render(layout.page, vars)));
+            if (page < ranking.pages()) navigation.appendSibling(new TextComponentString(HudText.render(layout.navigationSeparator, vars)))
+                    .appendSibling(button(layout.next, page + 1, command, vars));
+            sender.sendMessage(navigation);
+            send(sender, layout.hint, vars);
+        }
+        private void send(ICommandSender sender, String text, Map<String, String> vars) {
+            sender.sendMessage(new TextComponentString(HudText.render(text, vars)));
+        }
+        private ITextComponent button(String label, int page, String command, Map<String, String> vars) {
+            Map<String, String> buttonVars = new LinkedHashMap<>(vars);
+            buttonVars.put("target_page", Integer.toString(page));
+            TextComponentString button = new TextComponentString(HudText.render(label, buttonVars));
+            button.getStyle().setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command + " " + page))
+                    .setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                            new TextComponentString(HudText.render(config.kills.navigationHover, buttonVars))));
+            return button;
+        }
+        public List<String> getTabCompletions(MinecraftServer srv, ICommandSender sender, String[] args, net.minecraft.util.math.BlockPos pos) {
+            if (args.length != 1 || !config.kills.enabled) return Collections.emptyList();
+            int players = serverDeaths.snapshot().size();
+            int pages = players == 0 ? 1 : (players - 1) / DeathLeaderboard.PAGE_SIZE + 1;
+            List<String> options = new ArrayList<>();
+            for (int page = 1; page <= Math.min(pages, 100); page++) options.add(Integer.toString(page));
+            return getListOfStringsMatchingLastWord(args, options);
         }
     }
     private final class HudCommand extends CommandBase {

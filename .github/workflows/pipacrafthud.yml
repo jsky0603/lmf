@@ -30,11 +30,11 @@ jobs:
           python3 - <<'PY'
           import json, struct, zipfile
           from pathlib import Path
-          jar = Path('PiPaCraftHUD/build/libs/PiPaCraftHUD-1.0.1.jar')
+          jar = Path('PiPaCraftHUD/build/libs/PiPaCraftHUD-1.0.2.jar')
           with zipfile.ZipFile(jar) as z:
               info = json.loads(z.read('mcmod.info'))[0]
               assert info['modid'] == 'pipacrafthud'
-              assert info['version'] == '1.0.1' and info['mcversion'] == '1.12.2'
+              assert info['version'] == '1.0.2' and info['mcversion'] == '1.12.2'
               assert info['serverSideOnly']
               classes = [n for n in z.namelist() if n.endswith('.class')]
               assert 'de/skyz/pipacrafthud/PiPaCraftHUD.class' in classes
@@ -45,13 +45,17 @@ jobs:
                   assert b'net/minecraft/client/' not in data, name
               command = z.read('de/skyz/pipacrafthud/PiPaCraftHUD$LiveCommand.class')
               assert b'func_82362_a' in command and b'func_184882_a' in command
+              kills = z.read('de/skyz/pipacrafthud/PiPaCraftHUD$KillsCommand.class')
+              assert b'func_82362_a' in kills and b'func_184882_a' in kills
+              assert b'RUN_COMMAND' in kills and b'/pipakills' in kills
+              assert 'de/skyz/pipacrafthud/DeathLeaderboard.class' in classes
           print('Java 8, Server-Metadaten und SRG-Befehle geprüft.')
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: PiPaCraftHUD-1.0.1
+          name: PiPaCraftHUD-1.0.2
           path: |
-            PiPaCraftHUD/build/libs/PiPaCraftHUD-1.0.1.jar
+            PiPaCraftHUD/build/libs/PiPaCraftHUD-1.0.2.jar
             PiPaCraftHUD/README-DE.md
             PiPaCraftHUD/pipacrafthud.example.json
           if-no-files-found: error

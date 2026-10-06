@@ -42,7 +42,7 @@ public final class ServerDeathsTest {
         String legacy = "{\"serverName\":\"Custom\",\"scoreboardLines\":[\"&7Tode: &f{deaths}\",\"Tail\"],\"futureField\":true}";
         write(config, legacy);
         HudConfig migrated = HudConfig.load(config.toFile());
-        eq("Custom", migrated.serverName); eq(2, migrated.configVersion);
+        eq("Custom", migrated.serverName); eq(3, migrated.configVersion);
         eq(Arrays.asList("&7Tode: &f{deaths}", "&7Server Tode: &f{server_deaths}", "Tail"), Arrays.asList(migrated.scoreboardLines));
         eq(legacy, new String(Files.readAllBytes(temp.resolve("pipacrafthud.json.v1.bak")), StandardCharsets.UTF_8));
         JsonObject root = new JsonParser().parse(new String(Files.readAllBytes(config), StandardCharsets.UTF_8)).getAsJsonObject();

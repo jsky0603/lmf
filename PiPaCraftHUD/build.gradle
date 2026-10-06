@@ -3,7 +3,7 @@ buildscript {
  dependencies { classpath 'net.minecraftforge.gradle:ForgeGradle:3.0.197' }
 }
 apply plugin: 'net.minecraftforge.gradle'
-version = '1.0.1'
+version = '1.0.2'
 group = 'de.skyz.pipacrafthud'
 archivesBaseName = 'PiPaCraftHUD'
 sourceCompatibility = targetCompatibility = '1.8'
@@ -20,4 +20,14 @@ task serverDeathTests(type: JavaExec, dependsOn: testClasses) {
  classpath = sourceSets.test.runtimeClasspath
 }
 check.dependsOn serverDeathTests
+task leaderboardTests(type: JavaExec, dependsOn: testClasses) {
+ main = 'de.skyz.pipacrafthud.DeathLeaderboardTest'
+ classpath = sourceSets.test.runtimeClasspath
+}
+check.dependsOn leaderboardTests
+task killsCommandTests(type: JavaExec, dependsOn: testClasses) {
+ main = 'de.skyz.pipacrafthud.KillsCommandTest'
+ classpath = sourceSets.test.runtimeClasspath
+}
+check.dependsOn killsCommandTests
 jar.finalizedBy('reobfJar')

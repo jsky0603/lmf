@@ -11,7 +11,7 @@ import java.time.ZoneId;
 import java.util.*;
 
 public final class HudConfig {
-    public int configVersion = 2;
+    public int configVersion = 3;
     public String serverName = "PiPa Craft";
     public String timezone = "Europe/Berlin";
     public int updateTicks = 10;
@@ -38,6 +38,7 @@ public final class HudConfig {
     public String hudOnMessage = "&dDein Scoreboard ist aktiviert.";
     public String hudOffMessage = "&7Dein Scoreboard ist deaktiviert.";
     public String reloadMessage = "&dPiPaCraft HUD: Config neu geladen.";
+    public KillsConfig kills = new KillsConfig();
     public String[] titleFrames = {"&d&lPiPa &5&lCraft", "&5&lPiPa &d&lCraft", "&d&lPiPa &f&lCraft", "&f&lPiPa &d&lCraft"};
     public String[] headerFrames = {
         "&5&m------------------------\n&d&lPiPa &5&lCraft\n&fGemeinsam spielen &d<3\n&7Online: &f{online}&7/&f{max_players}",
@@ -61,6 +62,8 @@ public final class HudConfig {
             throw new IllegalArgumentException("updateTicks und animationTicks: 5 bis 1200.");
         if (liveCommandCooldownSeconds < 0 || liveCommandCooldownSeconds > 3600)
             throw new IllegalArgumentException("liveCommandCooldownSeconds: 0 bis 3600.");
+        if (kills == null) throw new IllegalArgumentException("kills darf nicht null sein.");
+        kills.validate();
         ZoneId.of(timezone);
         check(titleFrames, "titleFrames", 100); check(headerFrames, "headerFrames", 100);
         check(footerFrames, "footerFrames", 100); check(scoreboardLines, "scoreboardLines", 15);
@@ -93,7 +96,9 @@ public final class HudConfig {
         HudConfig config = gson.fromJson(root, HudConfig.class);
         if (config == null) throw new IllegalArgumentException("Config ist leer.");
         config.validate();
-        if (!root.has("configVersion") || config.configVersion < 2) {
+        int previousVersion = root.has("configVersion") ? config.configVersion : 1;
+        boolean changed = false;
+        if (previousVersion < 2) {
             List<String> lines = new ArrayList<>(Arrays.asList(config.scoreboardLines));
             boolean alreadyPresent = lines.stream().anyMatch(line -> line.contains("{server_deaths}"));
             if (!alreadyPresent && lines.size() < 15) {
@@ -103,12 +108,22 @@ public final class HudConfig {
                 lines.add(insertion, "&7Server Tode: &f{server_deaths}");
             }
             config.scoreboardLines = lines.toArray(new String[0]);
-            config.configVersion = 2;
             root.add("scoreboardLines", gson.toJsonTree(config.scoreboardLines));
-            root.addProperty("configVersion", 2);
+            changed = true;
+        }
+        if (!root.has("kills")) {
+            root.add("kills", gson.toJsonTree(config.kills));
+            changed = true;
+        }
+        if (previousVersion < 3) {
+            config.configVersion = 3;
+            root.addProperty("configVersion", 3);
+            changed = true;
+        }
+        if (changed) {
             config.validate();
             Path path = file.toPath();
-            Path backup = path.resolveSibling(file.getName() + ".v1.bak");
+            Path backup = path.resolveSibling(file.getName() + ".v" + previousVersion + ".bak");
             if (!Files.exists(backup)) Files.copy(path, backup);
             Path temporary = Files.createTempFile(path.toAbsolutePath().getParent(), "pipahud-", ".json.tmp");
             try {

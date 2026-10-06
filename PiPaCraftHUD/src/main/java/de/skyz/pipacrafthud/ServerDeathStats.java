@@ -16,6 +16,7 @@ public final class ServerDeathStats {
     private long total;
 
     public long total() { return total; }
+    public Map<UUID, Long> snapshot() { return Collections.unmodifiableMap(new HashMap<>(counts)); }
 
     public void update(UUID player, long deaths) {
         long count = Math.max(0, deaths);

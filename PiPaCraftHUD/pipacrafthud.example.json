@@ -1,5 +1,5 @@
 {
-  "configVersion": 2,
+  "configVersion": 3,
   "serverName": "PiPa Craft",
   "timezone": "Europe/Berlin",
   "updateTicks": 10,
@@ -26,6 +26,30 @@
   "hudOnMessage": "&dDein Scoreboard ist aktiviert.",
   "hudOffMessage": "&7Dein Scoreboard ist deaktiviert.",
   "reloadMessage": "&dPiPaCraft HUD: Config neu geladen.",
+  "kills": {
+    "enabled": true,
+    "separator": "&5&m--------------------------------",
+    "title": "&d&lPiPa &5&lCraft &8| &f&lTodesrangliste",
+    "summary": "&7{players} Spieler &8| &7Server-Tode: &d{total_deaths}",
+    "row": "{rank_color}#{rank} &f{player} &8» &d{deaths} &7Tode",
+    "empty": "&7Noch keine Spielerdaten vorhanden.",
+    "previous": "&d« Zurück",
+    "next": "&dWeiter »",
+    "page": "&7Seite &f{page}&7/&f{pages}",
+    "navigationSeparator": "&8 | ",
+    "navigationHover": "&fZu Seite &d{target_page}",
+    "playerHover": "&7Spieler: &f{player}\n&7UUID: &f{uuid}",
+    "hint": "&8Die meisten Tode zuerst. &7/kills <Seite>",
+    "usage": "&7Nutzung: &d/kills [Seite]",
+    "invalidPage": "&cDiese Seite gibt es nicht. &7Wähle &d1 &7bis &d{pages}&7.",
+    "disabled": "&7Die Todesrangliste ist deaktiviert.",
+    "rankColors": [
+      "&6&l",
+      "&d&l",
+      "&5&l",
+      "&7"
+    ]
+  },
   "titleFrames": [
     "&d&lPiPa &5&lCraft",
     "&5&lPiPa &d&lCraft",

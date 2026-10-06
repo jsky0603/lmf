@@ -2,6 +2,8 @@ package de.skyz.pipacrafthud;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -9,6 +11,7 @@ import java.time.ZoneId;
 import java.util.*;
 
 public final class HudConfig {
+    public int configVersion = 2;
     public String serverName = "PiPa Craft";
     public String timezone = "Europe/Berlin";
     public int updateTicks = 10;
@@ -44,7 +47,7 @@ public final class HudConfig {
         "&7Live: &d{live_count} &8| &7Ping: &f{ping} ms\n&fMit &d/live &fmarkierst du deinen Stream.\n&5&m------------------------",
         "&7Live: &d{live_count} &8| &7Ping: &f{ping} ms\n&fMit &5/live &fmarkierst du deinen Stream.\n&d&m------------------------"
     };
-    public String[] scoreboardLines = {"&5&m----------------", "&7Spieler: &f{player}", "&7Online: &d{online}&7/&f{max_players}", "&7Stream: {live}", "&r", "&7Spielzeit: &f{playtime}", "&7Tode: &f{deaths}", "&7Ping: &f{ping} ms", "&7TPS: &f{tps}", "&r", "&d/live &7zum Umschalten", "&5&m----------------"};
+    public String[] scoreboardLines = {"&5&m----------------", "&7Spieler: &f{player}", "&7Online: &d{online}&7/&f{max_players}", "&7Stream: {live}", "&r", "&7Spielzeit: &f{playtime}", "&7Tode: &f{deaths}", "&7Server Tode: &f{server_deaths}", "&7Ping: &f{ping} ms", "&7TPS: &f{tps}", "&r", "&d/live &7zum Umschalten", "&5&m----------------"};
     public Map<String, String[]> animations = new LinkedHashMap<>();
     public Map<String, String> dimensionNames = new LinkedHashMap<>();
 
@@ -83,10 +86,37 @@ public final class HudConfig {
             Files.createDirectories(file.toPath().getParent());
             try (Writer w = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) { gson.toJson(new HudConfig(), w); }
         }
+        JsonObject root;
         try (Reader r = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
-            HudConfig config = gson.fromJson(r, HudConfig.class);
-            if (config == null) throw new IllegalArgumentException("Config ist leer.");
-            config.validate(); return config;
+            root = new JsonParser().parse(r).getAsJsonObject();
         }
+        HudConfig config = gson.fromJson(root, HudConfig.class);
+        if (config == null) throw new IllegalArgumentException("Config ist leer.");
+        config.validate();
+        if (!root.has("configVersion") || config.configVersion < 2) {
+            List<String> lines = new ArrayList<>(Arrays.asList(config.scoreboardLines));
+            boolean alreadyPresent = lines.stream().anyMatch(line -> line.contains("{server_deaths}"));
+            if (!alreadyPresent && lines.size() < 15) {
+                int insertion = lines.size();
+                for (int i = 0; i < lines.size(); i++)
+                    if (lines.get(i).contains("{deaths}")) { insertion = i + 1; break; }
+                lines.add(insertion, "&7Server Tode: &f{server_deaths}");
+            }
+            config.scoreboardLines = lines.toArray(new String[0]);
+            config.configVersion = 2;
+            root.add("scoreboardLines", gson.toJsonTree(config.scoreboardLines));
+            root.addProperty("configVersion", 2);
+            config.validate();
+            Path path = file.toPath();
+            Path backup = path.resolveSibling(file.getName() + ".v1.bak");
+            if (!Files.exists(backup)) Files.copy(path, backup);
+            Path temporary = Files.createTempFile(path.toAbsolutePath().getParent(), "pipahud-", ".json.tmp");
+            try {
+                try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) { gson.toJson(root, writer); }
+                try { Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
+                catch (AtomicMoveNotSupportedException ex) { Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING); }
+            } finally { Files.deleteIfExists(temporary); }
+        }
+        return config;
     }
 }

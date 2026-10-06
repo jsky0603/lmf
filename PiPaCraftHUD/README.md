@@ -1,11 +1,11 @@
-# PiPaCraft HUD 1.0.0
+# PiPaCraft HUD 1.0.1
 
 Eine **eigene neue Mod**, unabhängig von SkyZVerify und SkyZGallery. Für Minecraft **1.12.2**, Forge **14.23.5.2859**, Java **8**. Nur auf dem Server installieren; Spieler brauchen diese zusätzliche Mod nicht.
 
 ## Installation
 
 1. Server stoppen.
-2. `PiPaCraftHUD-1.0.0.jar` in den `mods/`-Ordner des Servers legen.
+2. `PiPaCraftHUD-1.0.1.jar` in den `mods/`-Ordner des Servers legen.
 3. Server starten. Die Mod erzeugt `config/pipacrafthud.json`.
 4. Config bearbeiten und als OP `/pipahud reload` ausführen. In der Serverkonsole: `pipahud reload` ohne `/`.
 
@@ -29,9 +29,19 @@ Live ist eine manuelle Markierung: Es gibt keine Twitch-Abfrage. Beim Verlassen 
 - Pink, Lila und Weiß; animierter Scoreboard-Titel und Tablist-Kopf/Fuß.
 - Live-Prefix vor der bisherigen Chatnachricht sowie im Tab-Namen.
 - Live-Prefix über dem Spieler, sofern er nicht bereits einem echten Server-Team angehört.
-- Standard-Scoreboard: Name, Spielerzahl, Live-Status, gesamte Spielzeit, Tode, Ping und geschätzte TPS. Ohne Economy.
+- Standard-Scoreboard: Name, Spielerzahl, Live-Status, gesamte Spielzeit, persönliche Tode, Server-Tode, Ping und geschätzte TPS. Ohne Economy.
 - Nur veränderte Texte werden gesendet; Scoreboard-Zeilen werden über stabile Einträge aktualisiert.
 - Keine eigenen Blöcke, Items, Client-Klassen oder zusätzlichen Netzwerkkanäle.
+
+## Update von 1.0.0
+
+Die alte JAR durch `PiPaCraftHUD-1.0.1.jar` ersetzen und den Server neu starten. Beim ersten Laden einer alten Config wird `"&7Server Tode: &f{server_deaths}"` direkt nach der persönlichen Todeszeile ergänzt. Farben und Position können danach in `scoreboardLines` frei geändert werden. Die vorhandenen Einstellungen und unbekannte Felder werden erhalten. Vor der einmaligen Migration wird `pipacrafthud.json.v1.bak` angelegt; `configVersion: 2` verhindert, dass eine bewusst entfernte Zeile beim nächsten Neustart wieder ergänzt wird. Hat eine angepasste Config bereits 15 Zeilen, wird keine Zeile verdrängt: eine ungenutzte Zeile entfernen und den Platzhalter selbst eintragen.
+
+### Wie Server-Tode gezählt werden
+
+Die Mod liest beim Start die Minecraft-Statistikdateien im `stats/`-Ordner der primären Serverwelt. Sie summiert `stat.deaths` pro Spieler-UUID. Für verbundene Spieler ersetzt der aktuelle Wert im Speicher den gespeicherten Dateiwert; derselbe Spieler wird nicht doppelt gezählt. Neue Tode erscheinen mit dem nächsten normalen HUD-Update. Offline-Werte bleiben enthalten. Die Anzeige gilt für die Serverwelt über alle Dimensionen und umfasst auch gespeicherte Tode aus der Zeit vor der Mod-Installation.
+
+Der Gesamtstand bleibt nach Neustarts aus den Minecraft-Statistiken rekonstruierbar. Gelöschte oder zurückgesetzte Statistiken senken den Wert nach Neustart bzw. `/pipahud reload`. Defekte Statistikdateien werden mit einer Warnung im Serverlog übersprungen. Gibt es keine gespeicherten Todesstatistiken, beginnt der Zähler bei 0. Es wird keine zusätzliche Statistik in die Welt geschrieben; vorhandene Minecraft-Stats werden nicht verändert.
 
 ## Config
 
@@ -39,6 +49,7 @@ JSON mit UTF-8 speichern. Keine Kommentare oder zusätzlichen Kommas im JSON. Mi
 
 | Einstellung | Bedeutung |
 |---|---|
+| `configVersion` | Stand der Config-Migration; nicht manuell zurücksetzen |
 | `serverName` | Für `{server}` |
 | `timezone` | Zeitzone für `{time}` und `{date}`; Standard `Europe/Berlin` |
 | `updateTicks` | Aktualisierung; 10 Ticks sind bei 20 TPS 0,5 Sekunden, erlaubt 5–1200 |
@@ -68,7 +79,8 @@ Farbcodes: `&d` Pink, `&5` Lila, `&f` Weiß, `&7` Grau. Formate: `&l` fett, `&m`
 | `{live}`, `{live_prefix}`, `{live_count}` | Persönlicher Live-Status / Prefix / Anzahl live markierter Spieler |
 | `{ping}` | Ping in Millisekunden |
 | `{tps}`, `{mspt}` | Aus mittlerer Tickdauer geschätzte TPS / Tickdauer in ms |
-| `{playtime}`, `{deaths}` | Minecraft-Statistiken der gesamten Spielzeit / Tode |
+| `{playtime}`, `{deaths}` | Minecraft-Statistiken der gesamten Spielzeit / persönlichen Tode |
+| `{server_deaths}` | Summe der Tode aller bekannten Spieler dieser Serverwelt, einschließlich offline befindlicher Spieler |
 | `{health}`, `{food}`, `{level}` | Lebenspunkte / Hungerpunkte / XP-Level |
 | `{world}`, `{dimension}` | Konfigurierter Weltname / Dimensions-ID |
 | `{x}`, `{y}`, `{z}` | Blockkoordinaten; standardmäßig nicht eingeblendet |
@@ -91,7 +103,7 @@ Java 8 installieren, anschließend im Projekt:
 ./gradlew --no-daemon build
 ```
 
-Unter Windows `gradlew.bat --no-daemon build`. Ergebnis: `build/libs/PiPaCraftHUD-1.0.0.jar`. Die ForgeGradle-Reobfuskierung muss erfolgreich laufen: Eine reine `javac`-JAR ist kein installierbares Release.
+Unter Windows `gradlew.bat --no-daemon build`. Ergebnis: `build/libs/PiPaCraftHUD-1.0.1.jar`. Die ForgeGradle-Reobfuskierung muss erfolgreich laufen: Eine reine `javac`-JAR ist kein installierbares Release.
 
 ## Prüfung auf deinem Testserver
 

@@ -23,7 +23,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-@Mod(modid = "pipacrafthud", name = "PiPaCraft HUD", version = "1.0.0",
+@Mod(modid = "pipacrafthud", name = "PiPaCraft HUD", version = "1.0.1",
         acceptedMinecraftVersions = "[1.12.2]", acceptableRemoteVersions = "*", serverSideOnly = true)
 public final class PiPaCraftHUD {
     private HudConfig config;
@@ -31,6 +31,7 @@ public final class PiPaCraftHUD {
     private Logger log;
     private MinecraftServer server;
     private long ticks;
+    private ServerDeathStats serverDeaths = new ServerDeathStats();
     private final Set<UUID> live = new HashSet<>(), hidden = new HashSet<>();
     private final Map<UUID, Long> cooldowns = new HashMap<>();
     private final Map<UUID, View> views = new HashMap<>();
@@ -47,6 +48,7 @@ public final class PiPaCraftHUD {
     }
     @Mod.EventHandler public void starting(FMLServerStartingEvent event) {
         server = event.getServer(); ticks = 0;
+        loadServerDeaths();
         event.registerServerCommand(new LiveCommand());
         event.registerServerCommand(new HudCommand());
     }
@@ -64,6 +66,7 @@ public final class PiPaCraftHUD {
         if (server == null || event.phase != TickEvent.Phase.END) return;
         ticks++;
         if (ticks % config.updateTicks != 0) return;
+        refreshOnlineDeaths();
         for (EntityPlayerMP p : players()) {
             try { views.computeIfAbsent(p.getUniqueID(), id -> new View()).update(p); }
             catch (RuntimeException ex) { log.error("PiPaCraft HUD: Anzeige fuer {} fehlgeschlagen.", p.getName(), ex); }
@@ -71,6 +74,7 @@ public final class PiPaCraftHUD {
     }
     @SubscribeEvent public void logout(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID id = event.player.getUniqueID();
+        if (event.player instanceof EntityPlayerMP) updateDeaths((EntityPlayerMP)event.player);
         live.remove(id); hidden.remove(id); cooldowns.remove(id); views.remove(id);
         for (View view : views.values()) view.lastTabNames.remove(id);
     }
@@ -103,6 +107,7 @@ public final class PiPaCraftHUD {
         vars.put("food", Integer.toString(p.getFoodStats().getFoodLevel()));
         vars.put("level", Integer.toString(p.experienceLevel));
         vars.put("deaths", Integer.toString(p.getStatFile().readStat(StatList.DEATHS)));
+        vars.put("server_deaths", Long.toString(serverDeaths.total()));
         vars.put("playtime", HudText.playtime(p.getStatFile().readStat(StatList.PLAY_ONE_MINUTE)));
         vars.put("dimension", Integer.toString(p.dimension));
         vars.put("world", config.dimensionNames.getOrDefault(Integer.toString(p.dimension), p.world.provider.getDimensionType().getName()));
@@ -130,7 +135,17 @@ public final class PiPaCraftHUD {
         for (EntityPlayerMP p : players()) { View v = views.get(p.getUniqueID()); if (v != null) v.clear(p); }
         config = next; views.clear();
         if (!config.liveEnabled) live.clear();
+        loadServerDeaths();
     }
+    private void loadServerDeaths() {
+        serverDeaths = ServerDeathStats.load(server.getEntityWorld().getSaveHandler().getWorldDirectory().toPath().resolve("stats"),
+                (path, ex) -> log.warn("PiPaCraft HUD: Todesstatistik {} konnte nicht gelesen werden.", path, ex));
+        refreshOnlineDeaths();
+    }
+    private void updateDeaths(EntityPlayerMP p) {
+        serverDeaths.update(p.getUniqueID(), p.getStatFile().readStat(StatList.DEATHS));
+    }
+    private void refreshOnlineDeaths() { for (EntityPlayerMP p : players()) updateDeaths(p); }
     private static void sendTabName(EntityPlayerMP viewer, UUID id, String text) {
         PacketBuffer buffer = new PacketBuffer(Unpooled.buffer());
         try {

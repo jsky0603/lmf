@@ -1,4 +1,5 @@
 {
+  "configVersion": 2,
   "serverName": "PiPa Craft",
   "timezone": "Europe/Berlin",
   "updateTicks": 10,
@@ -47,6 +48,7 @@
     "&r",
     "&7Spielzeit: &f{playtime}",
     "&7Tode: &f{deaths}",
+    "&7Server Tode: &f{server_deaths}",
     "&7Ping: &f{ping} ms",
     "&7TPS: &f{tps}",
     "&r",

@@ -30,15 +30,15 @@ jobs:
           python3 - <<'PY'
           import json, struct, zipfile
           from pathlib import Path
-          jar = Path('PiPaCraftHUD/build/libs/PiPaCraftHUD-1.0.0.jar')
+          jar = Path('PiPaCraftHUD/build/libs/PiPaCraftHUD-1.0.1.jar')
           with zipfile.ZipFile(jar) as z:
               info = json.loads(z.read('mcmod.info'))[0]
               assert info['modid'] == 'pipacrafthud'
-              assert info['version'] == '1.0.0' and info['mcversion'] == '1.12.2'
+              assert info['version'] == '1.0.1' and info['mcversion'] == '1.12.2'
               assert info['serverSideOnly']
               classes = [n for n in z.namelist() if n.endswith('.class')]
               assert 'de/skyz/pipacrafthud/PiPaCraftHUD.class' in classes
-              assert not any(n.endswith('HudTextTest.class') for n in classes)
+              assert not any(n.endswith('Test.class') for n in classes)
               for name in classes:
                   data = z.read(name)
                   assert struct.unpack('>H', data[6:8])[0] == 52, name
@@ -49,9 +49,9 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: PiPaCraftHUD-1.0.0
+          name: PiPaCraftHUD-1.0.1
           path: |
-            PiPaCraftHUD/build/libs/PiPaCraftHUD-1.0.0.jar
+            PiPaCraftHUD/build/libs/PiPaCraftHUD-1.0.1.jar
             PiPaCraftHUD/README-DE.md
             PiPaCraftHUD/pipacrafthud.example.json
           if-no-files-found: error
